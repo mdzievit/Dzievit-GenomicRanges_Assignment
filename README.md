@@ -3,8 +3,9 @@
 
 
 
-This folder contains 2 files in addition to the readme.
+This folder contains 3 files in addition to the readme.
  
-- R notebook folder that contains the code for this assignment
+- R notebook file that contains the code for this assignment
+- R notebook file in html
 - a .bed file with the required output.
 

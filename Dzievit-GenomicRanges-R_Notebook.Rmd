@@ -1,0 +1,86 @@
+---
+title: "Dzievit-GenomicRange-Assignment"
+author: "Matt Dzievit"
+date: "April 21, 2017"
+output:
+  html_document: default
+  html_notebook: default
+---
+# EEOB 546X
+# Spring 2017
+
+# Loading necessary Libraries
+```{r Loading Libraries}
+library(rtracklayer, quietly = TRUE, warn.conflicts = FALSE)
+library(BiocInstaller, quietly = TRUE, warn.conflicts = FALSE)
+biocLite("GenomicFeatures")
+
+##Installs an annotation package and builds a SQLite databate for the house mouse
+biocLite("TxDb.Mmusculus.UCSC.mm10.ensGene")
+library(TxDb.Mmusculus.UCSC.mm10.ensGene, quietly = TRUE, warn.conflicts = FALSE)
+txdb <- TxDb.Mmusculus.UCSC.mm10.ensGene
+```
+
+#Loading the data into R
+```{r Load data}
+setwd("C:/Users/mdzievit.IASTATE/Dropbox/Classes/EEOB_546X/bds-files/bds-files/chapter-09-working-with-range-data/")
+
+##Imports variant file from chr1
+dbsnp137 <- import("mm10_snp137_chr1_trunc.bed.gz")
+```
+# Finding variants w/in exons on this chr
+```{r Finding variants}
+collapsed_exons <- reduce(exons(txdb), ignore.strand=TRUE)
+chr1_collapsed_exons <- collapsed_exons[seqnames(collapsed_exons) == "chr1"]
+
+##Summary of what we just did:
+summary(width(dbsnp137))
+```
+  - This shows us that there are some variants with a width of 0, so we want to adjust those widths
+```{r Adjust widths of variants size 0}
+##Making a copy of the original data
+dbsnp137_resized <- dbsnp137
+
+##Subsetting variants with width = 0
+zw_i <- width(dbsnp137_resized) == 0
+
+##Resizing those with width 0 in data to have width of 1
+dbsnp137_resized[zw_i] <- resize(dbsnp137_resized[zw_i], width=1)
+```
+
+#Pulling and summarizing overlappping variants
+```{r Extract and summarize overlap variants}
+##Extract variants overlap exons on chr 1
+hits <- findOverlaps(dbsnp137_resized, chr1_collapsed_exons, 
+                     ignore.strand=TRUE)
+
+##Summarize number of variants
+num <- length(unique(queryHits(hits)))
+
+##Determine the proportion of variants that are exonic
+prop <- length(unique(queryHits(hits)))/length(dbsnp137_resized) *100
+
+print(paste("There are ", num, " of variants ",
+            "and ", round(prop,2), "% are exonic",sep = ""))
+```
+
+#Find number of variants per exon and append
+```{r Count num variants per exon}
+##Creates vector with number of variants per exon
+var_counts <- countOverlaps(chr1_collapsed_exons, 
+                            dbsnp137_resized, ignore.strand=TRUE)
+
+##Append this vector to the chr1 exons
+chr1_collapsed_exons$num_vars <- var_counts
+```
+
+#Exporting created file
+```{r}
+setwd("C:/Users/mdzievit.IASTATE/Dropbox/Classes/EEOB_546X/Dzievit-GenomicRanges_Assignment/")
+export(chr1_collapsed_exons, con="chr1_collapsed_exons.bed",
+      format="bed")
+```
+
+
+
+
